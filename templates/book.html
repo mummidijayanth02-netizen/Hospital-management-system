@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% block content %}
+  <h2>Book Appointment</h2>
+  <form id="bookingForm" class="row g-3">
+    <div class="col-md-6">
+      <label class="form-label">Full name</label>
+      <input class="form-control" name="name" required>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Phone</label>
+      <input class="form-control" name="phone" required>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Email</label>
+      <input class="form-control" name="email">
+    </div>
+
+    <div class="col-12">
+      <label class="form-label">Select Symptoms</label>
+      <div id="symptomsList" class="d-flex flex-wrap">
+        {% for s in symptoms %}
+          <div class="form-check me-3">
+            <input class="form-check-input" type="checkbox" value="{{ s.id }}" id="sym{{ s.id }}">
+            <label class="form-check-label" for="sym{{ s.id }}">{{ s.name }}</label>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label">Preferred Date</label>
+      <input type="date" class="form-control" id="dateInput" name="date">
+    </div>
+
+    <div class="col-12">
+      <button type="button" id="recommendBtn" class="btn btn-primary">Get Recommendations</button>
+    </div>
+
+    <div class="col-12 mt-3" id="recommendations"></div>
+
+  </form>
+{% endblock %}

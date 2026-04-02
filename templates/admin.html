@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block content %}
+  <h2>Admin: Manage Departments & Doctors</h2>
+  <div class="row">
+    <div class="col-md-6">
+      <h4>Departments</h4>
+      <ul id="deptList" class="list-group mb-3">
+        {% for d in departments %}
+          <li class="list-group-item" data-id="{{ d.id }}">{{ d.name }}</li>
+        {% endfor %}
+      </ul>
+      <h5>Add Department</h5>
+      <div class="input-group mb-3">
+        <input id="deptName" class="form-control" placeholder="Department name">
+        <button id="addDept" class="btn btn-outline-primary">Add</button>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <h4>Doctors</h4>
+      <ul id="docList" class="list-group mb-3">
+        {% for doc in doctors %}
+          <li class="list-group-item" data-id="{{ doc.id }}">{{ doc.name }} — {{ doc.department.name if doc.department else '' }} (slots/day: {{ doc.daily_slot_limit }})</li>
+        {% endfor %}
+      </ul>
+      <h5>Add Doctor</h5>
+      <div class="mb-2">
+        <input id="docName" class="form-control mb-1" placeholder="Doctor name">
+        <select id="docDept" class="form-select mb-1">
+          <option value="">Select department</option>
+          {% for d in departments %}
+            <option value="{{ d.id }}">{{ d.name }}</option>
+          {% endfor %}
+        </select>
+        <input id="docSlots" class="form-control" placeholder="Daily slots" type="number">
+        <button id="addDoc" class="btn btn-outline-primary mt-2">Add Doctor</button>
+      </div>
+    </div>
+  </div>
+  <div class="row mt-4">
+    <div class="col-12">
+      <a href="/appointments" class="btn btn-secondary">View Appointments</a>
+    </div>
+  </div>
+  <script>
+    // admin JS will be loaded from /static/app.js
+  </script>
+{% endblock %}

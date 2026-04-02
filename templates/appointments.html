@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block content %}
+  <h2>Appointments</h2>
+  <div class="row mb-3">
+    <div class="col-md-3">
+      <select id="filterDoc" class="form-select"><option value="">All doctors</option></select>
+    </div>
+    <div class="col-md-3">
+      <input id="filterDate" type="date" class="form-control">
+    </div>
+    <div class="col-md-3">
+      <button id="applyFilter" class="btn btn-primary">Apply</button>
+      <button id="exportBtn" class="btn btn-secondary">Export CSV</button>
+    </div>
+  </div>
+  <div id="apptTable"></div>
+{% endblock %}

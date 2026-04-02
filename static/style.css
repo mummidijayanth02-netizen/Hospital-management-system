@@ -1,0 +1,5 @@
+body { background: #f8f9fa; }
+.card { margin-top: 1rem; }
+
+.available { color: green; font-weight: 600; }
+.unavailable { color: #c00; font-weight: 600; }

@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row">
+  <div class="col-md-12">
+    <h2>Welcome, {{ patient.name }}!</h2>
+    <p class="text-muted">Email: {{ patient.email }} | Phone: {{ patient.phone }}</p>
+    <hr>
+  </div>
+</div>
+
+<div class="row mb-4">
+  <div class="col-md-6">
+    <a href="/book" class="btn btn-lg btn-primary w-100">Book Appointment</a>
+  </div>
+  <div class="col-md-6">
+    <a href="/logout" class="btn btn-lg btn-danger w-100">Logout</a>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-12">
+    <h3>Your Appointments</h3>
+    {% if appointments %}
+      <div class="table-responsive">
+        <table class="table table-striped">
+          <thead>
+            <tr>
+              <th>Doctor</th>
+              <th>Department</th>
+              <th>Date</th>
+              <th>Time</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for appt in appointments %}
+              <tr>
+                <td>{{ appt.doctor.name }}</td>
+                <td>{{ appt.doctor.department.name }}</td>
+                <td>{{ appt.date }}</td>
+                <td>{{ appt.time if appt.time else '-' }}</td>
+                <td>
+                  <span class="badge {% if appt.status == 'scheduled' %}bg-success{% elif appt.status == 'completed' %}bg-primary{% else %}bg-warning{% endif %}">
+                    {{ appt.status }}
+                  </span>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="alert alert-info">
+        You haven't booked any appointments yet. <a href="/book">Book an appointment</a>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
