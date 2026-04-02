@@ -2,3 +2,4 @@ Flask>=2.2
 Flask-SQLAlchemy>=3.0
 Flask-PyMongo>=2.3
 python-dotenv>=1.0
+certifi>=2023.7.22

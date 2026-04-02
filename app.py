@@ -32,8 +32,10 @@ else:
     # MongoDB setup
     from flask_pymongo import PyMongo
     from bson.objectid import ObjectId
+    import certifi
+    
     app.config['MONGO_URI'] = os.environ.get('MONGODB_URI') or 'mongodb+srv://jayanth:REPLACE_PASSWORD@cluster0.qmmn2m9.mongodb.net/hospital?retryWrites=true&w=majority'
-    mongo = PyMongo(app)
+    mongo = PyMongo(app, tlsCAFile=certifi.where())
 
     # initialize mongo too
     try:
