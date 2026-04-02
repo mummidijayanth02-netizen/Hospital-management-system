@@ -1,8 +1,29 @@
 {% extends 'base.html' %}
 {% block content %}
-  <div class="text-center">
-    <h1>Welcome to Smart Hospital</h1>
-    <p class="lead">Book appointments quickly and get department recommendations based on symptoms.</p>
-    <a href="/book" class="btn btn-lg btn-success">Book Appointment</a>
+<div class="row align-items-center justify-content-center min-vh-75 py-5 fade-in-up">
+  <div class="col-12 col-lg-8 text-center glass-card border-0 pb-5 pt-5 px-md-5">
+    
+    <div class="mb-4 delay-1">
+      <i class="bi bi-heart-pulse-fill text-danger" style="font-size: 3rem; filter: drop-shadow(0px 4px 6px rgba(255,0,0,0.3));"></i>
+    </div>
+    
+    <h1 class="display-3 fw-bolder mb-4 delay-1">
+      Welcome to <br class="d-md-none"><span class="gradient-text">Smart Hospital</span>
+    </h1>
+    
+    <p class="lead text-muted fs-4 mb-5 px-lg-4 delay-2" style="font-weight: 400;">
+      Next-generation healthcare at your fingertips. Book appointments instantly and get intelligent, AI-assisted department recommendations based on your symptoms.
+    </p>
+    
+    <div class="d-flex flex-column flex-sm-row justify-content-center gap-3 delay-3">
+      <a href="/book" class="btn btn-primary btn-lg rounded-pill px-5 py-3 shadow-lg fs-5">
+        <i class="bi bi-calendar2-check-fill me-2"></i> Book Appointment
+      </a>
+      <a href="/login" class="btn btn-light btn-lg rounded-pill px-5 py-3 shadow-sm fs-5 text-primary border focus-ring focus-ring-primary">
+        <i class="bi bi-person-fill me-2"></i> Member Login
+      </a>
+    </div>
+
   </div>
+</div>
 {% endblock %}

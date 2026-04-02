@@ -1,47 +1,73 @@
 {% extends 'base.html' %}
 {% block content %}
-  <h2>Admin: Manage Departments & Doctors</h2>
-  <div class="row">
-    <div class="col-md-6">
-      <h4>Departments</h4>
-      <ul id="deptList" class="list-group mb-3">
-        {% for d in departments %}
-          <li class="list-group-item" data-id="{{ d.id }}">{{ d.name }}</li>
-        {% endfor %}
-      </ul>
-      <h5>Add Department</h5>
-      <div class="input-group mb-3">
-        <input id="deptName" class="form-control" placeholder="Department name">
-        <button id="addDept" class="btn btn-outline-primary">Add</button>
+<div class="fade-in-up">
+  <div class="glass-card bg-dark text-white mb-5 delay-1 pb-4 border-0 shadow-lg">
+    <div class="d-flex align-items-center">
+      <i class="bi bi-shield-lock-fill text-warning fs-1 me-3"></i>
+      <div>
+        <h2 class="fw-bolder mb-0">System Administration</h2>
+        <p class="text-white-50 mb-0">Manage hospital departments, doctors, and symptoms</p>
       </div>
     </div>
-    <div class="col-md-6">
-      <h4>Doctors</h4>
-      <ul id="docList" class="list-group mb-3">
-        {% for doc in doctors %}
-          <li class="list-group-item" data-id="{{ doc.id }}">{{ doc.name }} — {{ doc.department.name if doc.department else '' }} (slots/day: {{ doc.daily_slot_limit }})</li>
-        {% endfor %}
-      </ul>
-      <h5>Add Doctor</h5>
-      <div class="mb-2">
-        <input id="docName" class="form-control mb-1" placeholder="Doctor name">
-        <select id="docDept" class="form-select mb-1">
-          <option value="">Select department</option>
-          {% for d in departments %}
-            <option value="{{ d.id }}">{{ d.name }}</option>
+  </div>
+
+  <div class="row g-4 delay-2">
+    
+    <!-- Departments -->
+    <div class="col-lg-4">
+      <div class="glass-card h-100">
+        <h4 class="fw-bold mb-4 border-bottom pb-2"><i class="bi bi- diagram-3 text-primary me-2"></i>Departments</h4>
+        <ul class="list-group list-group-flush mb-4">
+          {% for dept in departments %}
+            <li class="list-group-item bg-transparent d-flex justify-content-between align-items-center px-0">
+              <span class="fw-medium">{{ dept.name }}</span>
+              <span class="badge bg-primary rounded-pill">ID: {{ dept.id }}</span>
+            </li>
+          {% else %}
+            <li class="list-group-item bg-transparent px-0 text-muted">No departments created.</li>
           {% endfor %}
-        </select>
-        <input id="docSlots" class="form-control" placeholder="Daily slots" type="number">
-        <button id="addDoc" class="btn btn-outline-primary mt-2">Add Doctor</button>
+        </ul>
+        <button class="btn btn-outline-primary w-100 rounded-pill"><i class="bi bi-plus"></i> Add Department (API)</button>
       </div>
     </div>
-  </div>
-  <div class="row mt-4">
-    <div class="col-12">
-      <a href="/appointments" class="btn btn-secondary">View Appointments</a>
+    
+    <!-- Doctors -->
+    <div class="col-lg-4">
+      <div class="glass-card h-100 border-start border-info border-4">
+        <h4 class="fw-bold mb-4 border-bottom pb-2"><i class="bi bi-person-heart text-info me-2"></i>Doctors</h4>
+        <ul class="list-group list-group-flush mb-4">
+          {% for doc in doctors %}
+            <li class="list-group-item bg-transparent d-flex justify-content-between align-items-center px-0">
+              <div>
+                <span class="fw-bold">{{ doc.name }}</span><br>
+                <small class="text-muted">Limit: {{ doc.daily_slot_limit }} slots</small>
+              </div>
+              <span class="badge bg-info text-dark rounded-pill">Dept {{ doc.department_id }}</span>
+            </li>
+          {% else %}
+            <li class="list-group-item bg-transparent px-0 text-muted">No doctors registered.</li>
+          {% endfor %}
+        </ul>
+      </div>
     </div>
+    
+    <!-- Symptoms -->
+    <div class="col-lg-4">
+      <div class="glass-card h-100 border-start border-danger border-4">
+        <h4 class="fw-bold mb-4 border-bottom pb-2"><i class="bi bi-clipboard-pulse text-danger me-2"></i>Symptoms Core</h4>
+        <div class="d-flex flex-wrap gap-2 mb-4">
+          {% for sym in symptoms %}
+            <span class="badge bg-light text-dark border border-secondary px-3 py-2 rounded-pill fw-medium">
+              {{ sym.name|title }}
+            </span>
+          {% else %}
+            <span class="text-muted">No symptoms mapped.</span>
+          {% endfor %}
+        </div>
+        <button class="btn btn-outline-danger w-100 rounded-pill"><i class="bi bi-plus"></i> Map Symptom (API)</button>
+      </div>
+    </div>
+    
   </div>
-  <script>
-    // admin JS will be loaded from /static/app.js
-  </script>
+</div>
 {% endblock %}

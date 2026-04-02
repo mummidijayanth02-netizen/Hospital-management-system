@@ -1,65 +1,70 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="row justify-content-center mt-5">
-  <div class="col-md-6">
-    <div class="card">
-      <div class="card-body">
-        <h3 class="card-title text-center mb-4">Smart Hospital Login</h3>
+<div class="row justify-content-center align-items-center min-vh-75 py-5 fade-in-up">
+  <div class="col-12 col-md-8 col-lg-5">
+    
+    <div class="glass-card mt-3">
+      <div class="text-center mb-4">
+        <i class="bi bi-shield-check text-primary" style="font-size: 2.5rem;"></i>
+        <h2 class="fw-bold mt-2">Secure Login</h2>
+        <p class="text-muted">Access your personalized health dashboard</p>
+      </div>
+
+      {% if error %}
+      <div class="alert alert-danger border-0 shadow-sm rounded-3 fade show" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ error }}
+      </div>
+      {% endif %}
+      
+      <ul class="nav nav-pills nav-fill mb-4 p-1 bg-light rounded-pill border" id="loginTab" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active rounded-pill fw-bold" id="patient-tab" data-bs-toggle="tab" data-bs-target="#patient" type="button" role="tab">Patient</button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link rounded-pill fw-bold text-dark" id="doctor-tab" data-bs-toggle="tab" data-bs-target="#doctor" type="button" role="tab">Doctor</button>
+        </li>
+      </ul>
+      
+      <div class="tab-content" id="loginTabContent">
+        <!-- Patient Login -->
+        <div class="tab-pane fade show active" id="patient" role="tabpanel">
+          <form action="/login/patient" method="POST" class="needs-validation">
+            <div class="form-floating mb-3">
+              <input type="email" class="form-control" name="email" id="patEmail" placeholder="name@example.com" required>
+              <label for="patEmail"><i class="bi bi-envelope me-1"></i> Email address</label>
+            </div>
+            <div class="form-floating mb-4">
+              <input type="password" class="form-control" name="password" id="patPassword" placeholder="Password" required>
+              <label for="patPassword"><i class="bi bi-key me-1"></i> Password</label>
+            </div>
+            <button type="submit" class="btn btn-primary w-100 py-2 rounded-pill fs-5 mb-3">Login as Patient</button>
+            <div class="text-center">
+              <span class="text-muted">New here?</span> 
+              <a href="/signup/patient" class="text-decoration-none fw-bold text-primary ms-1">Create an account</a>
+            </div>
+          </form>
+        </div>
         
-        {% if error %}
-          <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            {{ error }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-          </div>
-        {% endif %}
-
-        <ul class="nav nav-tabs mb-3" role="tablist">
-          <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="patient-tab" data-bs-toggle="tab" data-bs-target="#patient-login" type="button">Patient Login</button>
-          </li>
-          <li class="nav-item" role="presentation">
-            <button class="nav-link" id="doctor-tab" data-bs-toggle="tab" data-bs-target="#doctor-login" type="button">Doctor Login</button>
-          </li>
-        </ul>
-
-        <div class="tab-content">
-          <!-- Patient Login Tab -->
-          <div class="tab-pane fade show active" id="patient-login" role="tabpanel">
-            <form method="POST" action="/login/patient">
-              <div class="mb-3">
-                <label for="patient-email" class="form-label">Email</label>
-                <input type="email" class="form-control" id="patient-email" name="email" required>
-              </div>
-              <div class="mb-3">
-                <label for="patient-password" class="form-label">Password</label>
-                <input type="password" class="form-control" id="patient-password" name="password" required>
-              </div>
-              <button type="submit" class="btn btn-primary w-100">Login</button>
-            </form>
-            <div class="text-center mt-3">
-              <p>Don't have an account? <a href="/signup/patient">Sign up as Patient</a></p>
+        <!-- Doctor Login -->
+        <div class="tab-pane fade" id="doctor" role="tabpanel">
+          <form action="/login/doctor" method="POST" class="needs-validation">
+            <div class="form-floating mb-3">
+              <input type="email" class="form-control" name="email" id="docEmail" placeholder="name@example.com" required>
+              <label for="docEmail"><i class="bi bi-envelope me-1"></i> Email address</label>
             </div>
-          </div>
-
-          <!-- Doctor Login Tab -->
-          <div class="tab-pane fade" id="doctor-login" role="tabpanel">
-            <form method="POST" action="/login/doctor">
-              <div class="mb-3">
-                <label for="doctor-email" class="form-label">Email</label>
-                <input type="email" class="form-control" id="doctor-email" name="email" required>
-              </div>
-              <div class="mb-3">
-                <label for="doctor-password" class="form-label">Password</label>
-                <input type="password" class="form-control" id="doctor-password" name="password" required>
-              </div>
-              <button type="submit" class="btn btn-primary w-100">Login</button>
-            </form>
-            <div class="text-center mt-3">
-              <p>Don't have an account? <a href="/signup/doctor">Sign up as Doctor</a></p>
+            <div class="form-floating mb-4">
+              <input type="password" class="form-control" name="password" id="docPassword" placeholder="Password" required>
+              <label for="docPassword"><i class="bi bi-key me-1"></i> Password</label>
             </div>
-          </div>
+            <button type="submit" class="btn btn-primary w-100 py-2 rounded-pill fs-5 mb-3">Login as Doctor</button>
+            <div class="text-center">
+              <span class="text-muted">Doctor portal access?</span> 
+              <a href="/signup/doctor" class="text-decoration-none fw-bold text-primary ms-1">Register now</a>
+            </div>
+          </form>
         </div>
       </div>
+      
     </div>
   </div>
 </div>

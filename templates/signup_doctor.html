@@ -1,54 +1,74 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="row justify-content-center mt-5">
-  <div class="col-md-6">
-    <div class="card">
-      <div class="card-body">
-        <h3 class="card-title text-center mb-4">Doctor Sign Up</h3>
-        
-        {% if error %}
-          <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            {{ error }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-          </div>
-        {% endif %}
-
-        <form method="POST" action="/signup/doctor">
-          <div class="mb-3">
-            <label for="name" class="form-label">Full Name</label>
-            <input type="text" class="form-control" id="name" name="name" required>
-          </div>
-          <div class="mb-3">
-            <label for="email" class="form-label">Email</label>
-            <input type="email" class="form-control" id="email" name="email" required>
-          </div>
-          <div class="mb-3">
-            <label for="department" class="form-label">Department</label>
-            <select class="form-select" id="department" name="department_id" required>
-              <option value="">Select Department</option>
-              {% for dept in departments %}
-                <option value="{{ dept.id }}">{{ dept.name }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="mb-3">
-            <label for="daily-slots" class="form-label">Daily Slot Limit</label>
-            <input type="number" class="form-control" id="daily-slots" name="daily_slot_limit" value="10" min="1" required>
-          </div>
-          <div class="mb-3">
-            <label for="password" class="form-label">Password</label>
-            <input type="password" class="form-control" id="password" name="password" required>
-          </div>
-          <div class="mb-3">
-            <label for="confirm-password" class="form-label">Confirm Password</label>
-            <input type="password" class="form-control" id="confirm-password" name="confirm_password" required>
-          </div>
-          <button type="submit" class="btn btn-success w-100">Sign Up</button>
-        </form>
-        <div class="text-center mt-3">
-          <p>Already have an account? <a href="/login">Login here</a></p>
-        </div>
+<div class="row justify-content-center align-items-center min-vh-75 py-5 fade-in-up">
+  <div class="col-12 col-md-8 col-lg-6">
+    <div class="glass-card mt-3 delay-1 border-start border-info border-5">
+      <div class="text-center mb-4">
+        <i class="bi bi-lungs-fill text-info" style="font-size: 2.5rem;"></i>
+        <h2 class="fw-bold mt-2">Doctor Registration</h2>
+        <p class="text-muted">Join our intelligent healthcare network</p>
       </div>
+
+      {% if error %}
+      <div class="alert alert-danger border-0 shadow-sm rounded-3 fade show" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ error }}
+      </div>
+      {% endif %}
+
+      <form action="/signup/doctor" method="POST" class="needs-validation">
+        
+        <div class="form-floating mb-3">
+          <input type="text" class="form-control" name="name" id="name" placeholder="Dr. Smith" required>
+          <label for="name"><i class="bi bi-person me-1"></i> Full Name (With Titles)</label>
+        </div>
+
+        <div class="form-floating mb-3">
+          <input type="email" class="form-control" name="email" id="email" placeholder="name@example.com" required>
+          <label for="email"><i class="bi bi-envelope me-1"></i> Email address</label>
+        </div>
+
+        <div class="row mb-3">
+          <div class="col-12 col-md-7 mb-3 mb-md-0">
+            <div class="form-floating">
+              <select name="department_id" id="department_id" class="form-select border-info" required>
+                <option value="">Choose department...</option>
+                {% for dept in departments %}
+                  <option value="{{ dept.id }}">{{ dept.name }}</option>
+                {% endfor %}
+              </select>
+              <label for="department_id"><i class="bi bi-diagram-2 me-1"></i> Specialization</label>
+            </div>
+          </div>
+          <div class="col-12 col-md-5">
+            <div class="form-floating text-muted">
+              <input type="number" class="form-control bg-light" name="daily_slot_limit" id="daily_slot_limit" value="10" min="1" max="50" required>
+              <label for="daily_slot_limit"><i class="bi bi-person-lines-fill me-1"></i> Daily Appt Limit</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="row mb-4">
+          <div class="col-12 col-md-6 mb-3 mb-md-0">
+            <div class="form-floating">
+              <input type="password" class="form-control" name="password" id="password" placeholder="Password" required>
+              <label for="password"><i class="bi bi-key me-1"></i> Password</label>
+            </div>
+          </div>
+          <div class="col-12 col-md-6">
+            <div class="form-floating">
+              <input type="password" class="form-control" name="confirm_password" id="confirm_password" placeholder="Confirm Password" required>
+              <label for="confirm_password"><i class="bi bi-key-fill me-1"></i> Confirm Password</label>
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary bg-gradient border-0 w-100 py-3 rounded-pill fs-5 mb-3 fw-bold shadow">Register Doctor Profile</button>
+        
+        <div class="text-center mt-3">
+          <span class="text-muted">Already registered?</span>
+          <a href="/login" class="text-decoration-none fw-bold text-info ms-1">Login here</a>
+        </div>
+      </form>
     </div>
   </div>
 </div>
