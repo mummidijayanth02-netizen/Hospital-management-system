@@ -28,7 +28,7 @@
       <div class="tab-content" id="loginTabContent">
         <!-- Patient Login -->
         <div class="tab-pane fade show active" id="patient" role="tabpanel">
-          <form action="/login/patient" method="POST" class="needs-validation">
+          <form action="/login/patient" method="POST" class="needs-validation" novalidate>
             <div class="form-floating mb-3">
               <input type="email" class="form-control" name="email" id="patEmail" placeholder="name@example.com" required>
               <label for="patEmail"><i class="bi bi-envelope me-1"></i> Email address</label>
@@ -47,7 +47,7 @@
         
         <!-- Doctor Login -->
         <div class="tab-pane fade" id="doctor" role="tabpanel">
-          <form action="/login/doctor" method="POST" class="needs-validation">
+          <form action="/login/doctor" method="POST" class="needs-validation" novalidate>
             <div class="form-floating mb-3">
               <input type="email" class="form-control" name="email" id="docEmail" placeholder="name@example.com" required>
               <label for="docEmail"><i class="bi bi-envelope me-1"></i> Email address</label>
