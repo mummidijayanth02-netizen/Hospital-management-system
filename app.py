@@ -35,7 +35,7 @@ else:
     import certifi
     
     app.config['MONGO_URI'] = os.environ.get('MONGODB_URI') or 'mongodb+srv://jayanth:REPLACE_PASSWORD@cluster0.qmmn2m9.mongodb.net/hospital?retryWrites=true&w=majority'
-    mongo = PyMongo(app, tlsCAFile=certifi.where())
+    mongo = PyMongo(app, tlsCAFile=certifi.where(), serverSelectionTimeoutMS=5000)
 
     # initialize mongo too
     try:
@@ -162,27 +162,30 @@ def signup_patient():
             
             session['user_id'] = user.id
         else:
-            if mongo.db.users.find_one({'email': email}):
-                return render_template('signup_patient.html', error='Email already registered'), 400
-            if mongo.db.patients.find_one({'phone': phone}):
-                return render_template('signup_patient.html', error='Phone number already registered'), 400
-            
-            res = mongo.db.users.insert_one({
-                'email': email,
-                'password_hash': generate_password_hash(password),
-                'role': 'patient',
-                'created_at': datetime.utcnow()
-            })
-            user_id = str(res.inserted_id)
-            
-            mongo.db.patients.insert_one({
-                'user_id': user_id,
-                'name': name,
-                'phone': phone,
-                'email': email
-            })
-            
-            session['user_id'] = user_id
+            try:
+                if mongo.db.users.find_one({'email': email}):
+                    return render_template('signup_patient.html', error='Email already registered'), 400
+                if mongo.db.patients.find_one({'phone': phone}):
+                    return render_template('signup_patient.html', error='Phone number already registered'), 400
+                
+                res = mongo.db.users.insert_one({
+                    'email': email,
+                    'password_hash': generate_password_hash(password),
+                    'role': 'patient',
+                    'created_at': datetime.utcnow()
+                })
+                user_id = str(res.inserted_id)
+                
+                mongo.db.patients.insert_one({
+                    'user_id': user_id,
+                    'name': name,
+                    'phone': phone,
+                    'email': email
+                })
+                
+                session['user_id'] = user_id
+            except Exception as e:
+                return render_template('signup_patient.html', error=f'Database Connection Failed! Please allow "0.0.0.0/0" in your MongoDB Atlas Network Access setting. Details: {str(e)[:50]}'), 500
             
         session['role'] = 'patient'
         return redirect(url_for('patient_dashboard'))
