@@ -11,7 +11,7 @@ load_dotenv()
 DB_BACKEND = os.environ.get('DB_BACKEND', os.environ.get('DATABASE', 'mongo')).lower()
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-change-in-production')
+app.secret_key = os.environ.get('SECRET_KEY', os.urandom(24))
 
 if DB_BACKEND == 'sqlite':
     # SQLAlchemy setup (local SQLite)
@@ -331,6 +331,7 @@ def logout():
     return redirect(url_for('index'))
 
 
+@app.route('/')
 def index():
     return render_template('index.html')
 
