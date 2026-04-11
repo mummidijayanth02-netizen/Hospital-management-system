@@ -347,7 +347,16 @@ def book_page():
     if DB_BACKEND == 'sqlite':
         symptoms = Symptom.query.all()
     else:
-        symptoms = list(mongo.db.symptoms.find({}))
+        try:
+            symptoms = list(mongo.db.symptoms.find({}))
+        except Exception as e:
+            return f"""
+            <h3>Database Connection Failed</h3>
+            <p>Vercel could not securely interact with your MongoDB Server.</p>
+            <p><b>Reasons:</b> Either your MongoDB IP Whitelist isn't set to "0.0.0.0/0", or your MONGODB_URI is invalid.</p>
+            <p><b>Exact Error:</b> {str(e)}</p>
+            """, 500
+            
     return render_template('book.html', symptoms=symptoms)
 
 
@@ -358,9 +367,18 @@ def admin_page():
         doctors = Doctor.query.all()
         symptoms = Symptom.query.all()
     else:
-        departments = list(mongo.db.departments.find({}))
-        doctors = list(mongo.db.doctors.find({}))
-        symptoms = list(mongo.db.symptoms.find({}))
+        try:
+            departments = list(mongo.db.departments.find({}))
+            doctors = list(mongo.db.doctors.find({}))
+            symptoms = list(mongo.db.symptoms.find({}))
+        except Exception as e:
+            return f"""
+            <h3>Database Connection Failed</h3>
+            <p>Vercel could not securely interact with your MongoDB Server.</p>
+            <p><b>Reasons:</b> Either your MongoDB IP Whitelist isn't set to "0.0.0.0/0", or your MONGODB_URI is invalid.</p>
+            <p><b>Exact Error:</b> {str(e)}</p>
+            """, 500
+            
     return render_template('admin.html', departments=departments, doctors=doctors, symptoms=symptoms)
 
 
