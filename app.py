@@ -34,7 +34,7 @@ else:
     from bson.objectid import ObjectId
     import certifi
     
-    app.config['MONGO_URI'] = os.environ.get('MONGODB_URI')
+    app.config['MONGO_URI'] = os.environ.get('MONGODB_URI', 'mongodb://localhost:27017/hospital_fallback')
     mongo = PyMongo(app, tlsCAFile=certifi.where(), serverSelectionTimeoutMS=5000)
 
     # initialize mongo too
