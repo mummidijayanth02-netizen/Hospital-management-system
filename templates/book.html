@@ -49,6 +49,17 @@
           <input type="date" class="form-control form-control-lg border-primary text-primary fw-bold" id="dateInput" name="date" required>
         </div>
 
+        <div class="col-md-7 mt-4">
+          <h5 class="fw-bold mb-3"><i class="bi bi-clipboard2-check text-info me-2"></i>Appointment Type</h5>
+          <div class="d-flex gap-3">
+            <input type="radio" class="btn-check" name="appointmentType" id="typeInPerson" value="in-person" checked>
+            <label class="btn btn-outline-primary rounded-pill px-4 fw-medium" for="typeInPerson"><i class="bi bi-building me-1"></i> In-Person Visit</label>
+            
+            <input type="radio" class="btn-check" name="appointmentType" id="typeTelehealth" value="telehealth">
+            <label class="btn btn-outline-info rounded-pill px-4 fw-medium" for="typeTelehealth"><i class="bi bi-camera-video me-1"></i> Telehealth</label>
+          </div>
+        </div>
+
         <div class="col-12 mt-4 text-end">
           <button type="button" id="recommendBtn" class="btn btn-primary bg-gradient btn-lg rounded-pill px-5 py-3 shadow">
             <i class="bi bi-magic me-2"></i> Get Recommendations

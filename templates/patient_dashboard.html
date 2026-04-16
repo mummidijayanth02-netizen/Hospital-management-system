@@ -8,10 +8,40 @@
           <h2 class="fw-bold mb-1"><span class="text-primary">Welcome,</span> {{ patient.name }}!</h2>
           <p class="text-muted mb-0 fw-medium"><i class="bi bi-envelope me-1"></i> {{ patient.email }} &nbsp;|&nbsp; <i class="bi bi-telephone me-1"></i> {{ patient.phone }}</p>
         </div>
-        <div class="mt-4 mt-md-0 d-flex gap-2">
+        <div class="mt-4 mt-md-0 d-flex gap-2 align-items-center">
+          <!-- Notification Bell -->
+          <button class="btn btn-outline-warning rounded-pill px-3 fw-bold position-relative" id="notifBellBtn" data-bs-toggle="modal" data-bs-target="#notifModal">
+            <i class="bi bi-bell-fill"></i>
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notifBadge" style="display:none;">0</span>
+          </button>
           <a href="/book" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm"><i class="bi bi-plus-circle me-1"></i> New Appointment</a>
           <a href="/logout" class="btn btn-outline-danger rounded-pill px-4 fw-bold"><i class="bi bi-box-arrow-right"></i></a>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Stats Row -->
+  <div class="row g-4 mb-5 delay-2">
+    <div class="col-md-4">
+      <div class="glass-card text-center py-4">
+        <i class="bi bi-calendar-check text-primary fs-1"></i>
+        <h3 class="fw-bold mt-2 mb-0">{{ appointments|length }}</h3>
+        <p class="text-muted mb-0">Total Appointments</p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="glass-card text-center py-4">
+        <i class="bi bi-camera-video text-info fs-1"></i>
+        <h3 class="fw-bold mt-2 mb-0" id="telehealthCount">0</h3>
+        <p class="text-muted mb-0">Telehealth Sessions</p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="glass-card text-center py-4">
+        <i class="bi bi-file-earmark-medical text-success fs-1"></i>
+        <h3 class="fw-bold mt-2 mb-0" id="recordsCount">—</h3>
+        <p class="text-muted mb-0">Medical Records</p>
       </div>
     </div>
   </div>
@@ -27,8 +57,8 @@
               <div class="card h-100 border-0 shadow-sm rounded-4 hover-shadow" style="transition: transform 0.2s;">
                 <div class="card-header bg-white border-0 pt-4 pb-0">
                   <div class="d-flex justify-content-between align-items-center">
-                    <span class="badge rounded-pill {% if appt.status == 'scheduled' %}bg-success{% elif appt.status == 'completed' %}bg-secondary{% else %}bg-warning{% endif %} px-3 py-2">
-                      {{ appt.status|title }}
+                    <span class="badge rounded-pill {% if appt.status == 'scheduled' %}bg-success{% elif appt.status == 'completed' %}bg-secondary{% elif appt.status == 'in-consultation' %}bg-primary{% elif appt.status == 'waiting-room' %}bg-warning text-dark{% elif appt.status == 'cancelled' %}bg-danger{% else %}bg-warning{% endif %} px-3 py-2">
+                      {{ appt.status|replace('-', ' ')|title }}
                     </span>
                     <h5 class="mb-0 text-primary fw-bold">{{ appt.date }}</h5>
                   </div>
@@ -40,10 +70,36 @@
                     {{ appt.doctor.department.name }}
                   </p>
                   <hr>
-                  <div class="d-flex align-items-center">
+                  <div class="d-flex align-items-center mb-2">
                     <i class="bi bi-clock-history text-secondary me-2 fs-4"></i>
                     <span class="fs-5 fw-bold text-dark">{{ appt.time if appt.time else 'Time TBA' }}</span>
                   </div>
+
+                  <!-- Appointment Type Badge -->
+                  {% if appt.appointment_type == 'telehealth' or appt.get('appointment_type') == 'telehealth' %}
+                    <div class="mt-2">
+                      <span class="badge bg-info bg-gradient rounded-pill px-3 py-2"><i class="bi bi-camera-video me-1"></i> Telehealth</span>
+                    </div>
+                  {% else %}
+                    <div class="mt-2">
+                      <span class="badge bg-light text-dark rounded-pill px-3 py-2"><i class="bi bi-building me-1"></i> In-Person</span>
+                    </div>
+                  {% endif %}
+
+                  <!-- Telehealth Link -->
+                  {% if appt.telehealth_url or appt.get('telehealth_url') %}
+                    <a href="{{ appt.telehealth_url or appt.get('telehealth_url') }}" class="btn btn-sm btn-info rounded-pill mt-2 fw-bold w-100">
+                      <i class="bi bi-camera-video-fill me-1"></i> Join Telehealth
+                      {% if appt.telehealth_passcode or appt.get('telehealth_passcode') %}
+                        <small class="ms-1">(Code: {{ appt.telehealth_passcode or appt.get('telehealth_passcode') }})</small>
+                      {% endif %}
+                    </a>
+                  {% endif %}
+                </div>
+                <div class="card-footer bg-white border-0 pb-3">
+                  <button class="btn btn-sm btn-outline-primary rounded-pill w-100 fw-bold" onclick="viewPrescription('{{ appt.id }}')">
+                    <i class="bi bi-file-earmark-medical me-1"></i> View Prescription
+                  </button>
                 </div>
               </div>
             </div>
@@ -58,5 +114,179 @@
       {% endif %}
     </div>
   </div>
+
+  <!-- Medical Records Section -->
+  <div class="row mt-5">
+    <div class="col-md-12">
+      <h3 class="fw-bold mb-4"><i class="bi bi-journal-medical text-success me-2"></i>Medical Records</h3>
+      <div id="medicalRecords" class="glass-card">
+        <p class="text-muted text-center py-3"><i class="bi bi-hourglass-split me-2"></i>Loading medical records...</p>
+      </div>
+    </div>
+  </div>
 </div>
+
+<!-- Notification Modal -->
+<div class="modal fade" id="notifModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-content rounded-4 border-0 shadow-lg">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold"><i class="bi bi-bell-fill text-warning me-2"></i>Notifications</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="notifList">
+        <p class="text-muted text-center">Loading...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Prescription Modal -->
+<div class="modal fade" id="rxModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content rounded-4 border-0 shadow-lg">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold"><i class="bi bi-file-earmark-medical text-primary me-2"></i>Prescription Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="rxDetails">
+        <p class="text-muted text-center">Loading...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Count telehealth appointments
+document.addEventListener('DOMContentLoaded', () => {
+  const cards = document.querySelectorAll('.badge.bg-info');
+  let telehealthCount = 0;
+  cards.forEach(b => { if (b.textContent.includes('Telehealth')) telehealthCount++; });
+  const el = document.getElementById('telehealthCount');
+  if (el) el.textContent = telehealthCount;
+
+  // Load notifications
+  loadNotifications();
+  loadMedicalRecords();
+});
+
+async function loadNotifications() {
+  try {
+    const countRes = await fetch('/api/notifications/unread-count');
+    const countData = await countRes.json();
+    const badge = document.getElementById('notifBadge');
+    if (countData.count > 0) {
+      badge.textContent = countData.count;
+      badge.style.display = '';
+    }
+  } catch(e) {}
+}
+
+document.getElementById('notifModal').addEventListener('show.bs.modal', async () => {
+  try {
+    const res = await fetch('/api/notifications');
+    const notifs = await res.json();
+    const container = document.getElementById('notifList');
+    if (notifs.length === 0) {
+      container.innerHTML = '<p class="text-muted text-center py-3">No notifications yet.</p>';
+      return;
+    }
+    container.innerHTML = notifs.map(n => `
+      <div class="p-3 mb-2 rounded-3 ${n.is_read ? 'bg-light' : 'bg-info bg-opacity-10 border border-info'}" style="cursor:pointer;" onclick="markRead('${n.id}', this)">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <h6 class="fw-bold mb-1">
+              <i class="bi ${n.category === 'prescription' ? 'bi-file-earmark-medical text-success' : n.category === 'appointment' ? 'bi-calendar-check text-primary' : 'bi-info-circle text-secondary'} me-1"></i>
+              ${n.title}
+            </h6>
+            <p class="mb-0 text-muted small">${n.message}</p>
+          </div>
+          ${!n.is_read ? '<span class="badge bg-info rounded-pill">New</span>' : ''}
+        </div>
+        <small class="text-muted">${n.created_at}</small>
+      </div>
+    `).join('');
+  } catch(e) {
+    document.getElementById('notifList').innerHTML = '<p class="text-danger text-center">Failed to load notifications.</p>';
+  }
+});
+
+async function markRead(id, el) {
+  try {
+    await fetch(`/api/notifications/${id}/read`, { method: 'PUT', headers: {'Content-Type':'application/json'} });
+    el.classList.remove('bg-info', 'bg-opacity-10', 'border', 'border-info');
+    el.classList.add('bg-light');
+    const badge = el.querySelector('.badge');
+    if (badge) badge.remove();
+    // Update count
+    loadNotifications();
+  } catch(e) {}
+}
+
+async function viewPrescription(apptId) {
+  const modal = new bootstrap.Modal(document.getElementById('rxModal'));
+  const container = document.getElementById('rxDetails');
+  container.innerHTML = '<p class="text-muted text-center">Loading...</p>';
+  modal.show();
+
+  try {
+    const res = await fetch(`/api/appointments/${apptId}/prescription`);
+    const rxs = await res.json();
+    if (rxs.length === 0) {
+      container.innerHTML = '<div class="text-center py-4"><i class="bi bi-clipboard-x text-muted" style="font-size:3rem;"></i><p class="text-muted mt-2">No prescription issued yet for this appointment.</p></div>';
+      return;
+    }
+    container.innerHTML = rxs.map(rx => `
+      <div class="p-3 bg-light rounded-3 mb-3">
+        <h6 class="fw-bold text-primary"><i class="bi bi-clipboard2-pulse me-1"></i> Diagnosis</h6>
+        <p class="mb-3">${rx.diagnosis}</p>
+        <h6 class="fw-bold text-success"><i class="bi bi-capsule me-1"></i> Medicines</h6>
+        <p class="mb-3">${rx.medicines}</p>
+        ${rx.lab_tests ? `<h6 class="fw-bold text-warning"><i class="bi bi-droplet me-1"></i> Lab Tests</h6><p class="mb-3">${rx.lab_tests}</p>` : ''}
+        ${rx.notes ? `<h6 class="fw-bold text-info"><i class="bi bi-sticky me-1"></i> Notes</h6><p class="mb-0">${rx.notes}</p>` : ''}
+        <small class="text-muted d-block mt-2">Issued: ${rx.created_at}</small>
+      </div>
+    `).join('');
+  } catch(e) {
+    container.innerHTML = '<p class="text-danger text-center">Failed to load prescription.</p>';
+  }
+}
+
+async function loadMedicalRecords() {
+  try {
+    const res = await fetch('/api/patient/records');
+    const records = await res.json();
+    const container = document.getElementById('medicalRecords');
+    const countEl = document.getElementById('recordsCount');
+    if (countEl) countEl.textContent = records.length;
+
+    if (records.length === 0) {
+      container.innerHTML = '<div class="text-center py-4"><i class="bi bi-journal-x text-muted" style="font-size:3rem;"></i><p class="text-muted mt-2">No medical records found yet.</p></div>';
+      return;
+    }
+    container.innerHTML = `
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="bg-light">
+            <tr><th>Date</th><th>Doctor</th><th>Diagnosis</th><th>Medicines</th><th>Lab Tests</th></tr>
+          </thead>
+          <tbody>
+            ${records.map(r => `
+              <tr>
+                <td class="fw-bold text-primary">${r.appointment_date}</td>
+                <td>${r.doctor}</td>
+                <td>${r.diagnosis}</td>
+                <td><span class="badge bg-success bg-opacity-75 rounded-pill">${r.medicines}</span></td>
+                <td>${r.lab_tests || '—'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch(e) {
+    document.getElementById('medicalRecords').innerHTML = '<p class="text-danger text-center">Failed to load records.</p>';
+  }
+}
+</script>
 {% endblock %}

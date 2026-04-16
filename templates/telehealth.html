@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="fade-in-up">
+  <div class="row justify-content-center py-5">
+    <div class="col-md-8 col-lg-6">
+      <div class="glass-card text-center shadow-lg border-info border-top border-4">
+        
+        <div class="mb-4">
+          <div class="bg-info bg-gradient text-white rounded-circle d-inline-flex justify-content-center align-items-center shadow" style="width: 80px; height: 80px;">
+            <i class="bi bi-camera-video-fill fs-1"></i>
+          </div>
+        </div>
+
+        <h2 class="fw-bolder text-dark mb-2">Telehealth Meeting Room</h2>
+        <p class="text-muted mb-4">Your secure virtual consultation is ready</p>
+
+        <div class="bg-light rounded-3 p-4 mb-4">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <span class="fw-medium text-muted">Meeting ID</span>
+            <span class="badge bg-dark font-monospace px-3 py-2 fs-6">{{ meeting_hash }}</span>
+          </div>
+          <hr>
+          <div class="d-flex align-items-center justify-content-center gap-3 mt-3">
+            <span class="text-success fw-bold"><i class="bi bi-shield-lock-fill me-1"></i> End-to-End Encrypted</span>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-center gap-3 mb-4">
+          <button class="btn btn-success btn-lg rounded-pill px-4 shadow" onclick="alert('Video call integration coming soon! This is a placeholder for WebRTC or a third-party video SDK.')">
+            <i class="bi bi-telephone-fill me-2"></i>Join Call
+          </button>
+          <button class="btn btn-outline-danger btn-lg rounded-pill px-4" onclick="window.history.back()">
+            <i class="bi bi-x-circle me-2"></i>Leave
+          </button>
+        </div>
+
+        <div class="row g-3 text-center">
+          <div class="col-4">
+            <div class="p-3 bg-light rounded-3">
+              <i class="bi bi-mic-fill text-primary fs-4"></i>
+              <p class="mb-0 small fw-medium mt-1">Microphone</p>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="p-3 bg-light rounded-3">
+              <i class="bi bi-camera-video text-primary fs-4"></i>
+              <p class="mb-0 small fw-medium mt-1">Camera</p>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="p-3 bg-light rounded-3">
+              <i class="bi bi-chat-dots text-primary fs-4"></i>
+              <p class="mb-0 small fw-medium mt-1">Chat</p>
+            </div>
+          </div>
+        </div>
+
+        <p class="text-muted small mt-4"><i class="bi bi-info-circle me-1"></i>This is a secure meeting room powered by SmartHospital Telehealth.</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -38,3 +38,5 @@ def init_db(mongo):
         mongo.db.doctors.create_index('id', unique=True)
         mongo.db.patients.create_index('phone', unique=True)
         mongo.db.appointments.create_index([('doctor_id', 1), ('date', 1)])
+        mongo.db.prescriptions.create_index('appointment_id')
+        mongo.db.notifications.create_index([('user_id', 1), ('created_at', -1)])

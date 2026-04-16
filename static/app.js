@@ -79,15 +79,22 @@ document.addEventListener('DOMContentLoaded', () => {
           const phone = form.elements['phone'].value;
           const email = form.elements['email'].value;
           const date = document.getElementById('dateInput').value;
+          const appointmentType = document.querySelector('input[name="appointmentType"]:checked');
+          const appointment_type = appointmentType ? appointmentType.value : 'in-person';
           
           if (!name || !phone || !date) { 
             alert('Please fill out your name, phone, and preferred date to book.'); 
             return; 
           }
 
-          const res = await postJson('/api/book', {name, phone, email, doctor_id: docId, date});
+          const res = await postJson('/api/book', {name, phone, email, doctor_id: docId, date, appointment_type});
           if (res.success) {
-            alert('Booking Successful! Your Appointment ID is: ' + res.appointment_id);
+            let msg = 'Booking Successful! Your Appointment ID is: ' + res.appointment_id;
+            if (res.telehealth_url) {
+              msg += '\n\nTelehealth Meeting Link: ' + window.location.origin + res.telehealth_url;
+              msg += '\nPasscode: ' + res.telehealth_passcode;
+            }
+            alert(msg);
             btn.disabled = true;
             btn.innerText = 'Booked';
             btn.classList.replace('btn-primary', 'btn-secondary');

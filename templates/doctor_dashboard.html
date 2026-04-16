@@ -19,9 +19,41 @@
     </div>
   </div>
 
+  <!-- Quick Stats -->
+  <div class="row g-4 mb-5 delay-2">
+    <div class="col-md-3">
+      <div class="glass-card text-center py-3">
+        <i class="bi bi-calendar-check text-primary fs-2"></i>
+        <h4 class="fw-bold mt-2 mb-0">{{ appointments|length }}</h4>
+        <p class="text-muted small mb-0">Total Patients</p>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="glass-card text-center py-3">
+        <i class="bi bi-hourglass-split text-warning fs-2"></i>
+        <h4 class="fw-bold mt-2 mb-0" id="waitingCount">0</h4>
+        <p class="text-muted small mb-0">In Waiting Room</p>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="glass-card text-center py-3">
+        <i class="bi bi-person-check text-success fs-2"></i>
+        <h4 class="fw-bold mt-2 mb-0" id="consultCount">0</h4>
+        <p class="text-muted small mb-0">In Consultation</p>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="glass-card text-center py-3">
+        <i class="bi bi-check-circle text-secondary fs-2"></i>
+        <h4 class="fw-bold mt-2 mb-0" id="completedCount">0</h4>
+        <p class="text-muted small mb-0">Completed</p>
+      </div>
+    </div>
+  </div>
+
   <div class="row">
     <div class="col-md-12 delay-2">
-      <h3 class="fw-bold mb-4"><i class="bi bi-journal-medical text-primary me-2"></i>My Schedule</h3>
+      <h3 class="fw-bold mb-4"><i class="bi bi-journal-medical text-primary me-2"></i>Patient Queue & Schedule</h3>
       
       {% if appointments %}
         <div class="glass-card p-0 overflow-hidden">
@@ -33,13 +65,14 @@
                   <th>Contact</th>
                   <th>Date</th>
                   <th>Time</th>
+                  <th>Type</th>
                   <th>Status</th>
                   <th class="text-end pe-4">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {% for appt in appointments %}
-                  <tr>
+                  <tr id="appt-row-{{ appt.id }}">
                     <td class="ps-4 py-3">
                       <div class="d-flex align-items-center">
                         <div class="bg-primary text-white rounded-circle d-flex justify-content-center align-items-center me-3 fw-bold" style="width: 40px; height: 40px;">
@@ -55,14 +88,45 @@
                     <td class="fw-bold text-primary"><i class="bi bi-calendar-event me-1"></i>{{ appt.date }}</td>
                     <td class="fw-bold"><i class="bi bi-clock me-1 text-muted"></i>{{ appt.time if appt.time else 'TBA' }}</td>
                     <td>
-                      <span class="badge rounded-pill {% if appt.status == 'scheduled' %}bg-success{% elif appt.status == 'completed' %}bg-secondary{% else %}bg-warning{% endif %} px-3">
-                        {{ appt.status|title }}
+                      {% set atype = appt.appointment_type if appt.appointment_type is defined else appt.get('appointment_type', 'in-person') %}
+                      {% if atype == 'telehealth' %}
+                        <span class="badge bg-info rounded-pill px-2"><i class="bi bi-camera-video me-1"></i>Tele</span>
+                      {% else %}
+                        <span class="badge bg-light text-dark rounded-pill px-2"><i class="bi bi-building me-1"></i>Visit</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      <span class="badge rounded-pill {% if appt.status == 'scheduled' %}bg-success{% elif appt.status == 'completed' %}bg-secondary{% elif appt.status == 'in-consultation' %}bg-primary{% elif appt.status == 'waiting-room' %}bg-warning text-dark{% elif appt.status == 'cancelled' %}bg-danger{% else %}bg-warning{% endif %} px-3" id="status-{{ appt.id }}">
+                        {{ appt.status|replace('-', ' ')|title }}
                       </span>
                     </td>
                     <td class="text-end pe-4">
-                      <button class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold" onclick="markCompleted('{{ appt.id }}')">
-                        <i class="bi bi-check2-circle me-1"></i> Mark
-                      </button>
+                      <div class="btn-group btn-group-sm" role="group">
+                        {% if appt.status == 'scheduled' %}
+                          <button class="btn btn-outline-warning rounded-start-pill fw-bold px-3" onclick="updateStatus('{{ appt.id }}', 'waiting-room')" title="Check In">
+                            <i class="bi bi-door-open me-1"></i>Check In
+                          </button>
+                        {% elif appt.status == 'waiting-room' %}
+                          <button class="btn btn-outline-primary fw-bold px-3" onclick="updateStatus('{{ appt.id }}', 'in-consultation')" title="Start Consultation">
+                            <i class="bi bi-person-check me-1"></i>Start
+                          </button>
+                        {% elif appt.status == 'in-consultation' %}
+                          <button class="btn btn-outline-success fw-bold px-3" onclick="updateStatus('{{ appt.id }}', 'completed')" title="Complete">
+                            <i class="bi bi-check2-circle me-1"></i>Complete
+                          </button>
+                        {% endif %}
+                        
+                        {% if appt.status not in ['completed', 'cancelled'] %}
+                          <button class="btn btn-outline-danger rounded-end-pill fw-bold px-2" onclick="updateStatus('{{ appt.id }}', 'cancelled')" title="Cancel">
+                            <i class="bi bi-x-circle"></i>
+                          </button>
+                        {% endif %}
+
+                        <!-- Prescription Button -->
+                        <button class="btn btn-outline-info rounded-pill fw-bold px-3 ms-2" onclick="openPrescriptionForm('{{ appt.id }}')" title="Write Prescription">
+                          <i class="bi bi-file-earmark-medical me-1"></i>Rx
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 {% endfor %}
@@ -81,9 +145,125 @@
   </div>
 </div>
 
+<!-- Prescription Modal -->
+<div class="modal fade" id="rxModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content rounded-4 border-0 shadow-lg">
+      <div class="modal-header bg-primary bg-gradient text-white border-0 rounded-top-4">
+        <h5 class="modal-title fw-bold"><i class="bi bi-file-earmark-medical me-2"></i>Write Prescription</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <input type="hidden" id="rxApptId">
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label fw-bold"><i class="bi bi-clipboard2-pulse text-primary me-1"></i>Diagnosis <span class="text-danger">*</span></label>
+            <textarea class="form-control" id="rxDiagnosis" rows="2" placeholder="Enter diagnosis..."></textarea>
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-bold"><i class="bi bi-capsule text-success me-1"></i>Medicines <span class="text-danger">*</span></label>
+            <textarea class="form-control" id="rxMedicines" rows="3" placeholder="Enter prescribed medicines (e.g. Paracetamol 500mg - twice daily)..."></textarea>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold"><i class="bi bi-droplet text-warning me-1"></i>Lab Tests</label>
+            <input class="form-control" id="rxLabTests" placeholder="e.g. CBC, Blood Sugar, X-Ray">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold"><i class="bi bi-sticky text-info me-1"></i>Additional Notes</label>
+            <input class="form-control" id="rxNotes" placeholder="e.g. Follow-up in 2 weeks">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary bg-gradient rounded-pill px-4 fw-bold shadow-sm" id="submitRxBtn" onclick="submitPrescription()">
+          <i class="bi bi-check2-circle me-1"></i>Issue Prescription
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
-function markCompleted(appointmentId) {
-  alert('Appointment status update coming soon in API!');
+// Count stats on load
+document.addEventListener('DOMContentLoaded', () => {
+  const statusBadges = document.querySelectorAll('[id^="status-"]');
+  let waiting = 0, consult = 0, completed = 0;
+  statusBadges.forEach(b => {
+    const text = b.textContent.trim().toLowerCase();
+    if (text === 'waiting room') waiting++;
+    else if (text === 'in consultation') consult++;
+    else if (text === 'completed') completed++;
+  });
+  document.getElementById('waitingCount').textContent = waiting;
+  document.getElementById('consultCount').textContent = consult;
+  document.getElementById('completedCount').textContent = completed;
+});
+
+async function updateStatus(apptId, newStatus) {
+  const confirmMsg = {
+    'waiting-room': 'Check in this patient to the waiting room?',
+    'in-consultation': 'Start consultation with this patient?',
+    'completed': 'Mark this appointment as completed?',
+    'cancelled': 'Cancel this appointment? This cannot be undone.'
+  };
+  if (!confirm(confirmMsg[newStatus] || `Update status to ${newStatus}?`)) return;
+
+  try {
+    const res = await fetch(`/api/appointments/${apptId}/status`, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ status: newStatus })
+    });
+    const data = await res.json();
+    if (data.success) {
+      location.reload();
+    } else {
+      alert('Error: ' + data.message);
+    }
+  } catch(e) {
+    alert('Network error updating status.');
+  }
+}
+
+function openPrescriptionForm(apptId) {
+  document.getElementById('rxApptId').value = apptId;
+  document.getElementById('rxDiagnosis').value = '';
+  document.getElementById('rxMedicines').value = '';
+  document.getElementById('rxLabTests').value = '';
+  document.getElementById('rxNotes').value = '';
+  const modal = new bootstrap.Modal(document.getElementById('rxModal'));
+  modal.show();
+}
+
+async function submitPrescription() {
+  const apptId = document.getElementById('rxApptId').value;
+  const diagnosis = document.getElementById('rxDiagnosis').value.trim();
+  const medicines = document.getElementById('rxMedicines').value.trim();
+  const lab_tests = document.getElementById('rxLabTests').value.trim();
+  const notes = document.getElementById('rxNotes').value.trim();
+
+  if (!diagnosis || !medicines) {
+    alert('Diagnosis and Medicines are required.');
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/appointments/${apptId}/prescription`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ diagnosis, medicines, lab_tests, notes })
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert('Prescription issued successfully!');
+      bootstrap.Modal.getInstance(document.getElementById('rxModal')).hide();
+    } else {
+      alert('Error: ' + data.message);
+    }
+  } catch(e) {
+    alert('Network error submitting prescription.');
+  }
 }
 </script>
 {% endblock %}

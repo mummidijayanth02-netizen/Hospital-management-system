@@ -1,6 +1,8 @@
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from datetime import datetime
 import os
+import hashlib
+import uuid
 from dotenv import load_dotenv
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -13,9 +15,41 @@ DB_BACKEND = os.environ.get('DB_BACKEND', os.environ.get('DATABASE', 'mongo')).l
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', os.urandom(24))
 
+from flask_cors import CORS
+# Enable CORS for all routes and origins
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+
+# Global Error Handlers
+@app.errorhandler(404)
+def not_found_error(error):
+    if request.path.startswith('/api/'):
+        return jsonify({'success': False, 'message': 'Resource not found', 'error': '404', 'details': str(error)}), 404
+    return render_template('index.html'), 404 # Redirect to index or a 404 page
+
+@app.errorhandler(500)
+def internal_server_error(error):
+    return jsonify({'success': False, 'message': 'Internal Server Error', 'error': '500', 'details': str(error)}), 500
+
+@app.errorhandler(503)
+def service_unavailable_error(error):
+    return jsonify({'success': False, 'message': 'Service Unavailable', 'error': '503', 'details': str(error)}), 503
+
+@app.errorhandler(505)
+def http_version_not_supported(error):
+    return jsonify({'success': False, 'message': 'HTTP Version Not Supported', 'error': '505', 'details': str(error)}), 505
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    # Log the general exception
+    app.logger.error(f'Unhandled Exception: {e}')
+    if request.path.startswith('/api/'):
+        return jsonify({'success': False, 'message': 'An unexpected error occurred.', 'details': str(e)}), 500
+    # For regular pages, return a generic error message
+    return f"<h3>An unexpected error occurred.</h3><p>Details: {str(e)}</p>", 500
+
 if DB_BACKEND == 'sqlite':
     # SQLAlchemy setup (local SQLite)
-    from models import db, Patient, Department, Symptom, Doctor, Appointment, department_symptoms, User
+    from models import db, Patient, Department, Symptom, Doctor, Appointment, department_symptoms, User, Prescription, Notification
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('SQLALCHEMY_DATABASE_URI', 'sqlite:///hospital.db')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     db.init_app(app)
@@ -467,6 +501,7 @@ def book():
     email = data.get('email')
     doctor_id = data.get('doctor_id')
     date_str = data.get('date')
+    appointment_type = data.get('appointment_type', 'in-person')  # 'in-person' or 'telehealth'
 
     if not (patient_name and doctor_id and date_str):
         return jsonify({'success': False, 'message': 'Missing required fields'}), 400
@@ -493,10 +528,31 @@ def book():
         if count >= doctor.daily_slot_limit:
             return jsonify({'success': False, 'message': 'No slots available for selected doctor on this date'}), 409
 
-        appt = Appointment(patient_id=patient.id, doctor_id=doctor.id, date=str(appt_date), time=data.get('time', ''), status='scheduled')
+        appt = Appointment(patient_id=patient.id, doctor_id=doctor.id, date=str(appt_date), time=data.get('time', ''), status='scheduled', appointment_type=appointment_type)
         db.session.add(appt)
         db.session.commit()
-        return jsonify({'success': True, 'message': 'Appointment booked', 'appointment_id': appt.id})
+
+        # Generate telehealth link if telehealth appointment
+        telehealth_url = None
+        telehealth_passcode = None
+        if appointment_type == 'telehealth':
+            telehealth_url, telehealth_passcode = generate_telehealth_link(appt.id)
+            appt.telehealth_url = telehealth_url
+            appt.telehealth_passcode = telehealth_passcode
+            db.session.commit()
+
+        # Send booking confirmation notification
+        if patient.user_id:
+            msg = f'Your appointment with {doctor.name} on {appt_date} has been confirmed.'
+            if telehealth_url:
+                msg += f' Telehealth link: {telehealth_url} (Passcode: {telehealth_passcode})'
+            create_notification(patient.user_id, 'Appointment Confirmed', msg, 'appointment')
+
+        result = {'success': True, 'message': 'Appointment booked', 'appointment_id': appt.id}
+        if telehealth_url:
+            result['telehealth_url'] = telehealth_url
+            result['telehealth_passcode'] = telehealth_passcode
+        return jsonify(result)
     else:
         # mongo path
         patient = mongo.db.patients.find_one({'phone': phone})
@@ -519,17 +575,40 @@ def book():
         if count >= doctor.get('daily_slot_limit', 0):
             return jsonify({'success': False, 'message': 'No slots available for selected doctor on this date'}), 409
 
+        # Generate telehealth link if requested
+        temp_id = str(uuid.uuid4().hex[:12])
+        telehealth_url = None
+        telehealth_passcode = None
+        if appointment_type == 'telehealth':
+            telehealth_url, telehealth_passcode = generate_telehealth_link(temp_id)
+
         appt = {
             'patient_id': patient_id,
             'doctor_id': doctor['id'],
             'date': str(appt_date),
             'time': data.get('time', ''),
             'status': 'scheduled',
+            'appointment_type': appointment_type,
+            'telehealth_url': telehealth_url,
+            'telehealth_passcode': telehealth_passcode,
             'created_at': datetime.utcnow()
         }
 
         res = mongo.db.appointments.insert_one(appt)
-        return jsonify({'success': True, 'message': 'Appointment booked', 'appointment_id': str(res.inserted_id)})
+
+        # Send booking confirmation notification
+        patient_doc = mongo.db.patients.find_one({'_id': ObjectId(patient_id)}) if not patient else patient
+        if patient_doc and patient_doc.get('user_id'):
+            msg = f'Your appointment with {doctor["name"]} on {appt_date} has been confirmed.'
+            if telehealth_url:
+                msg += f' Telehealth link: {telehealth_url} (Passcode: {telehealth_passcode})'
+            create_notification(patient_doc['user_id'], 'Appointment Confirmed', msg, 'appointment')
+
+        result = {'success': True, 'message': 'Appointment booked', 'appointment_id': str(res.inserted_id)}
+        if telehealth_url:
+            result['telehealth_url'] = telehealth_url
+            result['telehealth_passcode'] = telehealth_passcode
+        return jsonify(result)
 
 
 # Admin CRUD APIs
@@ -777,6 +856,360 @@ def export_appointments():
     csv_data = si.getvalue()
     from flask import Response
     return Response(csv_data, mimetype='text/csv', headers={'Content-Disposition':'attachment; filename=appointments.csv'})
+
+
+# ============================================================
+# UTILITY: Telehealth URL & Passcode Generator
+# ============================================================
+def generate_telehealth_link(appointment_id):
+    """Generate a deterministic but unique telehealth meeting URL and passcode."""
+    raw = f"{appointment_id}-{uuid.uuid4().hex}"
+    meeting_hash = hashlib.sha256(raw.encode()).hexdigest()[:12]
+    passcode = hashlib.md5(raw.encode()).hexdigest()[:6].upper()
+    url = f"/telehealth/meeting/{meeting_hash}"
+    return url, passcode
+
+
+# ============================================================
+# UTILITY: Notification Creator
+# ============================================================
+def create_notification(user_id, title, message, category='info'):
+    """Push an in-app notification for a user (both SQLite and MongoDB)."""
+    try:
+        if DB_BACKEND == 'sqlite':
+            notif = Notification(user_id=user_id, title=title, message=message, category=category)
+            db.session.add(notif)
+            db.session.commit()
+        else:
+            mongo.db.notifications.insert_one({
+                'user_id': str(user_id),
+                'title': title,
+                'message': message,
+                'category': category,
+                'is_read': False,
+                'created_at': datetime.utcnow()
+            })
+    except Exception as e:
+        print(f'Notification creation failed: {e}')
+
+
+# ============================================================
+# FEATURE 1: Digital Prescriptions & Medical Records
+# ============================================================
+
+@app.route('/api/appointments/<appt_id>/prescription', methods=['POST'])
+def create_prescription(appt_id):
+    """Doctor writes a prescription for a completed or in-progress appointment."""
+    if 'user_id' not in session or session.get('role') != 'doctor':
+        return jsonify({'success': False, 'message': 'Unauthorized: doctor login required'}), 403
+
+    data = request.json or {}
+    diagnosis = data.get('diagnosis')
+    medicines = data.get('medicines')
+    notes = data.get('notes', '')
+    lab_tests = data.get('lab_tests', '')
+
+    if not diagnosis or not medicines:
+        return jsonify({'success': False, 'message': 'Diagnosis and medicines are required'}), 400
+
+    if DB_BACKEND == 'sqlite':
+        appt = Appointment.query.get(int(appt_id))
+        if not appt:
+            return jsonify({'success': False, 'message': 'Appointment not found'}), 404
+
+        rx = Prescription(
+            appointment_id=appt.id,
+            diagnosis=diagnosis,
+            medicines=medicines,
+            notes=notes,
+            lab_tests=lab_tests
+        )
+        db.session.add(rx)
+        db.session.commit()
+
+        # Notify the patient
+        patient = Patient.query.get(appt.patient_id)
+        if patient and patient.user_id:
+            doctor = Doctor.query.get(appt.doctor_id)
+            create_notification(
+                patient.user_id,
+                'New Prescription Issued',
+                f'{doctor.name if doctor else "Your doctor"} has issued a new prescription for your appointment on {appt.date}.',
+                'prescription'
+            )
+
+        return jsonify({'success': True, 'prescription_id': rx.id})
+    else:
+        from bson.objectid import ObjectId
+        appt = mongo.db.appointments.find_one({'_id': ObjectId(appt_id)})
+        if not appt:
+            return jsonify({'success': False, 'message': 'Appointment not found'}), 404
+
+        rx_doc = {
+            'appointment_id': appt_id,
+            'diagnosis': diagnosis,
+            'medicines': medicines,
+            'notes': notes,
+            'lab_tests': lab_tests,
+            'created_at': datetime.utcnow()
+        }
+        res = mongo.db.prescriptions.insert_one(rx_doc)
+
+        # Notify patient
+        patient = mongo.db.patients.find_one({'_id': ObjectId(appt['patient_id'])})
+        if patient and patient.get('user_id'):
+            doctor = mongo.db.doctors.find_one({'id': appt['doctor_id']})
+            create_notification(
+                patient['user_id'],
+                'New Prescription Issued',
+                f'{doctor["name"] if doctor else "Your doctor"} has issued a new prescription for your appointment on {appt["date"]}.',
+                'prescription'
+            )
+
+        return jsonify({'success': True, 'prescription_id': str(res.inserted_id)})
+
+
+@app.route('/api/appointments/<appt_id>/prescription', methods=['GET'])
+def get_prescription(appt_id):
+    """Retrieve prescriptions for a specific appointment."""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Login required'}), 403
+
+    if DB_BACKEND == 'sqlite':
+        rxs = Prescription.query.filter_by(appointment_id=int(appt_id)).all()
+        return jsonify([{
+            'id': rx.id,
+            'diagnosis': rx.diagnosis,
+            'medicines': rx.medicines,
+            'notes': rx.notes,
+            'lab_tests': rx.lab_tests,
+            'created_at': str(rx.created_at)
+        } for rx in rxs])
+    else:
+        rxs = list(mongo.db.prescriptions.find({'appointment_id': appt_id}))
+        return jsonify([{
+            'id': str(rx['_id']),
+            'diagnosis': rx.get('diagnosis'),
+            'medicines': rx.get('medicines'),
+            'notes': rx.get('notes'),
+            'lab_tests': rx.get('lab_tests'),
+            'created_at': str(rx.get('created_at'))
+        } for rx in rxs])
+
+
+@app.route('/api/patient/records', methods=['GET'])
+def patient_medical_records():
+    """Patient retrieves their full medical history (all prescriptions)."""
+    if 'user_id' not in session or session.get('role') != 'patient':
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+
+    if DB_BACKEND == 'sqlite':
+        user = User.query.get(session['user_id'])
+        patient = Patient.query.filter_by(user_id=user.id).first()
+        if not patient:
+            return jsonify([])
+        appts = Appointment.query.filter_by(patient_id=patient.id).all()
+        records = []
+        for appt in appts:
+            rxs = Prescription.query.filter_by(appointment_id=appt.id).all()
+            doctor = Doctor.query.get(appt.doctor_id)
+            for rx in rxs:
+                records.append({
+                    'appointment_date': appt.date,
+                    'doctor': doctor.name if doctor else 'Unknown',
+                    'diagnosis': rx.diagnosis,
+                    'medicines': rx.medicines,
+                    'notes': rx.notes,
+                    'lab_tests': rx.lab_tests,
+                    'created_at': str(rx.created_at)
+                })
+        return jsonify(records)
+    else:
+        from bson.objectid import ObjectId
+        user = mongo.db.users.find_one({'_id': ObjectId(session['user_id'])})
+        patient = mongo.db.patients.find_one({'user_id': str(user['_id'])}) if user else None
+        if not patient:
+            return jsonify([])
+        appts = list(mongo.db.appointments.find({'patient_id': str(patient['_id'])}))
+        records = []
+        for appt in appts:
+            rxs = list(mongo.db.prescriptions.find({'appointment_id': str(appt['_id'])}))
+            doctor = mongo.db.doctors.find_one({'id': appt.get('doctor_id')})
+            for rx in rxs:
+                records.append({
+                    'appointment_date': appt.get('date'),
+                    'doctor': doctor.get('name') if doctor else 'Unknown',
+                    'diagnosis': rx.get('diagnosis'),
+                    'medicines': rx.get('medicines'),
+                    'notes': rx.get('notes'),
+                    'lab_tests': rx.get('lab_tests'),
+                    'created_at': str(rx.get('created_at'))
+                })
+        return jsonify(records)
+
+
+# ============================================================
+# FEATURE 2: Appointment Status & Queue Workflow
+# ============================================================
+
+VALID_STATUS_TRANSITIONS = {
+    'scheduled': ['waiting-room', 'cancelled'],
+    'waiting-room': ['in-consultation', 'cancelled'],
+    'in-consultation': ['completed'],
+    'completed': [],
+    'cancelled': []
+}
+
+
+@app.route('/api/appointments/<appt_id>/status', methods=['PUT'])
+def update_appointment_status(appt_id):
+    """Update appointment status through the workflow pipeline."""
+    if 'user_id' not in session or session.get('role') != 'doctor':
+        return jsonify({'success': False, 'message': 'Unauthorized: doctor login required'}), 403
+
+    data = request.json or {}
+    new_status = data.get('status')
+
+    if not new_status:
+        return jsonify({'success': False, 'message': 'Status is required'}), 400
+
+    if DB_BACKEND == 'sqlite':
+        appt = Appointment.query.get(int(appt_id))
+        if not appt:
+            return jsonify({'success': False, 'message': 'Appointment not found'}), 404
+
+        current = appt.status or 'scheduled'
+        allowed = VALID_STATUS_TRANSITIONS.get(current, [])
+        if new_status not in allowed:
+            return jsonify({'success': False, 'message': f'Cannot transition from "{current}" to "{new_status}". Allowed: {allowed}'}), 400
+
+        appt.status = new_status
+        db.session.commit()
+
+        # Notify patient of status change
+        patient = Patient.query.get(appt.patient_id)
+        if patient and patient.user_id:
+            status_messages = {
+                'waiting-room': 'You have been checked in. Please proceed to the waiting room.',
+                'in-consultation': 'The doctor is ready for you. Your consultation is starting.',
+                'completed': 'Your appointment has been completed. Check your dashboard for prescriptions.',
+                'cancelled': 'Your appointment has been cancelled.'
+            }
+            create_notification(
+                patient.user_id,
+                f'Appointment Status: {new_status.replace("-", " ").title()}',
+                status_messages.get(new_status, f'Your appointment status has been updated to {new_status}.'),
+                'appointment'
+            )
+
+        return jsonify({'success': True, 'status': new_status})
+    else:
+        from bson.objectid import ObjectId
+        appt = mongo.db.appointments.find_one({'_id': ObjectId(appt_id)})
+        if not appt:
+            return jsonify({'success': False, 'message': 'Appointment not found'}), 404
+
+        current = appt.get('status', 'scheduled')
+        allowed = VALID_STATUS_TRANSITIONS.get(current, [])
+        if new_status not in allowed:
+            return jsonify({'success': False, 'message': f'Cannot transition from "{current}" to "{new_status}". Allowed: {allowed}'}), 400
+
+        mongo.db.appointments.update_one({'_id': ObjectId(appt_id)}, {'$set': {'status': new_status}})
+
+        # Notify patient
+        patient = mongo.db.patients.find_one({'_id': ObjectId(appt['patient_id'])})
+        if patient and patient.get('user_id'):
+            status_messages = {
+                'waiting-room': 'You have been checked in. Please proceed to the waiting room.',
+                'in-consultation': 'The doctor is ready for you. Your consultation is starting.',
+                'completed': 'Your appointment has been completed. Check your dashboard for prescriptions.',
+                'cancelled': 'Your appointment has been cancelled.'
+            }
+            create_notification(
+                patient['user_id'],
+                f'Appointment Status: {new_status.replace("-", " ").title()}',
+                status_messages.get(new_status, f'Your appointment status has been updated to {new_status}.'),
+                'appointment'
+            )
+
+        return jsonify({'success': True, 'status': new_status})
+
+
+# ============================================================
+# FEATURE 3: Telemedicine — telehealth meeting room
+# ============================================================
+
+@app.route('/telehealth/meeting/<meeting_hash>')
+def telehealth_meeting(meeting_hash):
+    """Render a simple telehealth meeting placeholder page."""
+    return render_template('telehealth.html', meeting_hash=meeting_hash)
+
+
+# ============================================================
+# FEATURE 4: Notification System
+# ============================================================
+
+@app.route('/api/notifications', methods=['GET'])
+def get_notifications():
+    """Retrieve all notifications for the logged-in user."""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Login required'}), 403
+
+    if DB_BACKEND == 'sqlite':
+        notifs = Notification.query.filter_by(user_id=session['user_id']).order_by(Notification.created_at.desc()).all()
+        return jsonify([{
+            'id': n.id,
+            'title': n.title,
+            'message': n.message,
+            'category': n.category,
+            'is_read': n.is_read,
+            'created_at': str(n.created_at)
+        } for n in notifs])
+    else:
+        notifs = list(mongo.db.notifications.find({'user_id': str(session['user_id'])}).sort('created_at', -1))
+        return jsonify([{
+            'id': str(n['_id']),
+            'title': n.get('title'),
+            'message': n.get('message'),
+            'category': n.get('category'),
+            'is_read': n.get('is_read', False),
+            'created_at': str(n.get('created_at'))
+        } for n in notifs])
+
+
+@app.route('/api/notifications/<notif_id>/read', methods=['PUT'])
+def mark_notification_read(notif_id):
+    """Mark a single notification as read."""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Login required'}), 403
+
+    if DB_BACKEND == 'sqlite':
+        notif = Notification.query.get(int(notif_id))
+        if not notif or notif.user_id != session['user_id']:
+            return jsonify({'success': False}), 404
+        notif.is_read = True
+        db.session.commit()
+        return jsonify({'success': True})
+    else:
+        from bson.objectid import ObjectId
+        mongo.db.notifications.update_one(
+            {'_id': ObjectId(notif_id), 'user_id': str(session['user_id'])},
+            {'$set': {'is_read': True}}
+        )
+        return jsonify({'success': True})
+
+
+@app.route('/api/notifications/unread-count', methods=['GET'])
+def unread_notification_count():
+    """Return the count of unread notifications for the logged-in user."""
+    if 'user_id' not in session:
+        return jsonify({'count': 0})
+
+    if DB_BACKEND == 'sqlite':
+        count = Notification.query.filter_by(user_id=session['user_id'], is_read=False).count()
+    else:
+        count = mongo.db.notifications.count_documents({'user_id': str(session['user_id']), 'is_read': False})
+    return jsonify({'count': count})
 
 
 if __name__ == '__main__':

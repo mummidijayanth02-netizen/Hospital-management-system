@@ -40,6 +40,12 @@
                 </span>
               </li>
               {% if patient %}
+              <li class="nav-item me-2">
+                <a class="btn btn-outline-warning btn-sm rounded-pill fw-bold px-3 position-relative" href="/patient/dashboard" title="Notifications">
+                  <i class="bi bi-bell-fill"></i>
+                  <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger global-notif-badge" style="display:none;font-size:0.6rem;">0</span>
+                </a>
+              </li>
               <li class="nav-item"><a class="btn btn-outline-info btn-sm rounded-pill fw-bold px-3 me-2" href="/patient/dashboard">Dashboard</a></li>
               {% elif doctor %}
               <li class="nav-item"><a class="btn btn-outline-info btn-sm rounded-pill fw-bold px-3 me-2" href="/doctor/dashboard">Dashboard</a></li>
@@ -66,7 +72,19 @@
     <script src="/static/app.js"></script>
     
     <script>
-      // Add simple initialization logic for tooltips, fade in, etc if needed.
+      // Global: update notification badge on every page
+      document.addEventListener('DOMContentLoaded', async () => {
+        try {
+          const res = await fetch('/api/notifications/unread-count');
+          const data = await res.json();
+          document.querySelectorAll('.global-notif-badge').forEach(badge => {
+            if (data.count > 0) {
+              badge.textContent = data.count > 9 ? '9+' : data.count;
+              badge.style.display = '';
+            }
+          });
+        } catch(e) { /* not logged in or no notifications */ }
+      });
     </script>
   </body>
 </html>
