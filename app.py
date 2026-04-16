@@ -72,11 +72,15 @@ else:
     mongo = PyMongo(app, tlsCAFile=certifi.where(), serverSelectionTimeoutMS=5000)
 
     # initialize mongo too
-    try:
-        from db_init import init_db
-        init_db(mongo)
-    except Exception as e:
-        print('Warning: MongoDB initialization failed during import:', e)
+    with app.app_context():
+        try:
+            from db_init import init_db
+            if mongo.db is not None:
+                init_db(mongo)
+            else:
+                print('Warning: MongoDB initialization failed - mongo.db is None. Check your MONGO_URI.')
+        except Exception as e:
+            print('Warning: MongoDB initialization failed during import:', e)
 
 
 # Seed initialization will be run when starting the app directly.
