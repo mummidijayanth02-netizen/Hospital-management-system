@@ -6,20 +6,15 @@ load_dotenv()
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', os.urandom(24))
     
+    # MongoDB
+    MONGODB_URI = os.environ.get('MONGODB_URI')
+    
     # Backend selection: 'mongo' or 'sqlite'. Default is 'mongo'.
     DB_BACKEND = os.environ.get('DB_BACKEND', 'mongo').lower()
     
-    # SQLite / SQLAlchemy
-    if os.environ.get('VERCEL') == '1' or os.environ.get('RENDER') == 'true':
-        default_sqlite = 'sqlite:////tmp/hospital.db'
-    else:
-        default_sqlite = 'sqlite:///hospital.db'
-        
-    SQLALCHEMY_DATABASE_URI = os.environ.get('SQLALCHEMY_DATABASE_URI', default_sqlite)
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
-    
-    # MongoDB
-    MONGODB_URI = os.environ.get('MONGODB_URI')
+    # Auto-fallback to sqlite if mongo URI is missing (to prevent Vercel boot crash)
+    if not MONGODB_URI and DB_BACKEND == 'mongo':
+        DB_BACKEND = 'sqlite'
     
     # Telehealth / Meeting
     ENABLE_TELEHEALTH = True
