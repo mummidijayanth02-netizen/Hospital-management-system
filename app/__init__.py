@@ -23,10 +23,19 @@ def create_app(config_class=Config):
     if app.config['DB_BACKEND'] == 'sqlite':
         db.init_app(app)
         # Import models to ensure they are registered
-        from models import User
+        with app.app_context():
+            from models import User
+            db.create_all()
     else:
         app.config['MONGO_URI'] = app.config['MONGODB_URI']
         mongo.init_app(app, tlsCAFile=certifi.where())
+        # Seed data if needed
+        with app.app_context():
+            try:
+                from db_init import init_db
+                init_db(mongo)
+            except Exception as e:
+                print(f"DB seed skipped or failed: {e}")
 
     # Register Blueprints
     from app.routes.auth import auth_bp
