@@ -6,15 +6,15 @@ load_dotenv()
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-fallback-secret-key-change-in-production')
     
-    # Backend selection: 'mongo' or 'sqlite'. Default is 'mongo'.
-    DB_BACKEND = os.environ.get('DB_BACKEND', os.environ.get('DATABASE', 'mongo')).lower()
-    
-    # SQLite / SQLAlchemy
-    SQLALCHEMY_DATABASE_URI = os.environ.get('SQLALCHEMY_DATABASE_URI', 'sqlite:///hospital.db')
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
-    
     # MongoDB
-    MONGODB_URI = os.environ.get('MONGODB_URI', 'mongodb://localhost:27017/hospital_fallback')
+    MONGODB_URI = os.environ.get('MONGODB_URI')
+    
+    # Backend selection: 'mongo' or 'sqlite'. Default is 'mongo'.
+    DB_BACKEND = os.environ.get('DB_BACKEND', 'mongo').lower()
+    
+    # Auto-fallback to sqlite if mongo URI is missing (to prevent Vercel boot crash)
+    if not MONGODB_URI and DB_BACKEND == 'mongo':
+        DB_BACKEND = 'sqlite'
     
     # Telehealth / Meeting
     ENABLE_TELEHEALTH = True

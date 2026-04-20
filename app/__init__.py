@@ -7,7 +7,7 @@ import certifi
 import os
 
 # Globals for extensions
-db = SQLAlchemy()
+from models import db
 mongo = PyMongo()
 
 def create_app(config_class=Config):
