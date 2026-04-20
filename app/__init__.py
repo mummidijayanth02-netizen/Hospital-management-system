@@ -7,7 +7,7 @@ import certifi
 import os
 
 # Globals for extensions
-db = SQLAlchemy()
+from models import db
 mongo = PyMongo()
 
 def create_app(config_class=Config):
@@ -23,7 +23,10 @@ def create_app(config_class=Config):
     if app.config['DB_BACKEND'] == 'sqlite':
         db.init_app(app)
         # Import models to ensure they are registered
-        from models import User
+        from models import User, Patient, Doctor, Department, Symptom, Appointment
+        with app.app_context():
+            from sqlite_init import init_db as init_sqlite_db
+            init_sqlite_db()
     else:
         app.config['MONGO_URI'] = app.config['MONGODB_URI']
         mongo.init_app(app, tlsCAFile=certifi.where())

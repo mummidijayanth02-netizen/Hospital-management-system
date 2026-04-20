@@ -31,3 +31,38 @@ def inject_user():
                 doctor = mongo.db.doctors.find_one({'user_id': session.get('user_id')})
                 
     return dict(current_user=user, patient=patient, doctor=doctor)
+
+
+
+from models import Department, Symptom, Doctor, Appointment, Patient, department_symptoms
+from app import mongo
+from config import Config
+DB_BACKEND = Config.DB_BACKEND
+from datetime import datetime
+import json
+
+
+@main_bp.route('/book')
+def book_page():
+    if DB_BACKEND == 'sqlite':
+        symptoms = Symptom.query.all()
+    else:
+        symptoms = list(mongo.db.symptoms.find({}))
+    return render_template('book.html', symptoms=symptoms)
+
+
+
+
+@main_bp.route('/admin')
+def admin_page():
+    if DB_BACKEND == 'sqlite':
+        departments = Department.query.all()
+        doctors = Doctor.query.all()
+        symptoms = Symptom.query.all()
+    else:
+        departments = list(mongo.db.departments.find({}))
+        doctors = list(mongo.db.doctors.find({}))
+        symptoms = list(mongo.db.symptoms.find({}))
+    return render_template('admin.html', departments=departments, doctors=doctors, symptoms=symptoms)
+
+
